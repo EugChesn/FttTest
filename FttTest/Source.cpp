@@ -1,12 +1,12 @@
-#include<iostream>
+п»ї#include<iostream>
 #include<ctime>
 #include<complex>
 #include<fftw3.h>
 
 #define N 4096
-#define M 3072 //размер картинки
+#define M 3072 //СЂР°Р·РјРµСЂ РєР°СЂС‚РёРЅРєРё
 
-#define N_f 315 //размер фильтра
+#define N_f 315 //СЂР°Р·РјРµСЂ С„РёР»СЊС‚СЂР°
 #define M_f 315
 
 using namespace std;
@@ -53,7 +53,7 @@ void rand_arr(complex<double> ** arr , int H,int W)
 			arr[i][j] = complex<double>(1 + rand() % 20, 1 + rand() % 20);
 	}
 }
-void filling_zer(complex<double> ** new_arr, int new_size_n , int new_size_m , complex<double> ** old_arr ,int size_n ,int size_m) // заполнение нулями
+void filling_zer(complex<double> ** new_arr, int new_size_n , int new_size_m , complex<double> ** old_arr ,int size_n ,int size_m) // Р·Р°РїРѕР»РЅРµРЅРёРµ РЅСѓР»СЏРјРё
 {
 	for (int i = 0; i < new_size_n; i++)
 	{
@@ -122,19 +122,19 @@ complex<double> ** xcorr2(complex<double> ** image, complex<double> ** filter ,i
 	complex<double>** filter_f = create_array(res_size_n, res_size_m);
 	rot180(filter,N_f,M_f);
 
-	filling_zer(image_f, res_size_n, res_size_m, image, N, M); // Дополняем нулями
+	filling_zer(image_f, res_size_n, res_size_m, image, N, M); // Р”РѕРїРѕР»РЅСЏРµРј РЅСѓР»СЏРјРё
 	filling_zer(filter_f, res_size_n, res_size_m, filter, N_f, M_f);
 
-	fft(&image_f[0][0], &image_f[0][0], res_size_n, res_size_m); //out = in //Фурье прямое преобразование
+	fft(&image_f[0][0], &image_f[0][0], res_size_n, res_size_m); //out = in //Р¤СѓСЂСЊРµ РїСЂСЏРјРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ
 	fft(&filter_f[0][0], &filter_f[0][0], res_size_n, res_size_m); //out = in
 
-	complex<double>** mult = create_array(res_size_n, res_size_m); //Поэлементное перемножение результатов Фурье
+	complex<double>** mult = create_array(res_size_n, res_size_m); //РџРѕСЌР»РµРјРµРЅС‚РЅРѕРµ РїРµСЂРµРјРЅРѕР¶РµРЅРёРµ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ Р¤СѓСЂСЊРµ
 	multiply(image_f, filter_f,mult, res_size_n, res_size_m); //out = in
 
 	delete_array(image_f);
 	delete_array(filter_f);
 
-	ifft(&mult[0][0], &mult[0][0], res_size_n, res_size_m);//out = in //Обратное преобразование Фурье и нормализиция
+	ifft(&mult[0][0], &mult[0][0], res_size_n, res_size_m);//out = in //РћР±СЂР°С‚РЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ Р¤СѓСЂСЊРµ Рё РЅРѕСЂРјР°Р»РёР·РёС†РёСЏ
 	//normalize
 	/*cout << "Result" << endl;
 	show_arr(mult, res_size_n, res_size_m);*/
