@@ -3,11 +3,11 @@
 #include<complex>
 #include<fftw3.h>
 
-#define N 4096
-#define M 3072 //размер картинки
+#define N 1920
+#define M 1080 //размер картинки
 
-#define N_f 315 //размер фильтра
-#define M_f 315
+#define N_f 151 //размер фильтра
+#define M_f 151
 
 using namespace std;
 template<typename T>
@@ -50,7 +50,8 @@ void rand_arr(complex<double> ** arr , int H,int W)
 	for (int i = 0; i < H; i++)
 	{
 		for (int j = 0; j < W; j++)
-			arr[i][j] = complex<double>(1 + rand() % 20, 1 + rand() % 20);
+			arr[i][j] = complex<double>(1 + rand() % 20, 0);
+			//arr[i][j] = complex<double>(1 + rand() % 20, 1 + rand() % 20);
 	}
 }
 void filling_zer(complex<double> ** new_arr, int new_size_n , int new_size_m , complex<double> ** old_arr ,int size_n ,int size_m) // заполнение нулями
@@ -66,7 +67,7 @@ void filling_zer(complex<double> ** new_arr, int new_size_n , int new_size_m , c
 		}
 	}
 }
-void normalize(complex<double> **in ,int H,int W)
+/*void normalize(complex<double> **in ,int H,int W)
 {
 	double norm = (H * W);
 	for (int i = 0; i < H; i++)
@@ -74,13 +75,14 @@ void normalize(complex<double> **in ,int H,int W)
 		for (int j = 0; j < W; j++)
 			in[i][j]/=norm;
 	}
-}
-void multiply(complex<double> ** arr_ftt1, complex<double> ** arr_ftt2 ,complex<double> ** res , int H,int W)
+}*/
+void multiply(complex<double> ** arr_ftt1, complex<double> ** arr_ftt2 ,complex<double> ** res , int H,int W) //основная проблема в скорости
 {
+	double normalize = H * W; //сразу нормализуем
 	for (int i = 0; i < H; i++)
 	{
 		for (int j = 0; j < W; j++)
-			res[i][j] = arr_ftt1[i][j] * arr_ftt2[i][j];
+			res[i][j] = arr_ftt1[i][j] * arr_ftt2[i][j] / normalize;
 	}
 }
 void rot180(complex<double> **arr, int n, int m) //for filter
@@ -128,16 +130,13 @@ complex<double> ** xcorr2(complex<double> ** image, complex<double> ** filter ,i
 	fft(&image_f[0][0], &image_f[0][0], res_size_n, res_size_m); //out = in //Фурье прямое преобразование
 	fft(&filter_f[0][0], &filter_f[0][0], res_size_n, res_size_m); //out = in
 
-	complex<double>** mult = create_array(res_size_n, res_size_m); //Поэлементное перемножение результатов Фурье
+	complex<double>** mult = create_array(res_size_n, res_size_m); //Поэлементное перемножение результатов Фурье и нормализиция
 	multiply(image_f, filter_f,mult, res_size_n, res_size_m); //out = in
 
 	delete_array(image_f);
 	delete_array(filter_f);
 
-	ifft(&mult[0][0], &mult[0][0], res_size_n, res_size_m);//out = in //Обратное преобразование Фурье и нормализиция
-	//normalize
-	/*cout << "Result" << endl;
-	show_arr(mult, res_size_n, res_size_m);*/
+	ifft(&mult[0][0], &mult[0][0], res_size_n, res_size_m);//out = in //Обратное преобразование Фурье
 	return mult;
 }
 
@@ -160,7 +159,7 @@ int main()
 	int n_res = 0;
 	int m_res = 0;
 	complex<double>** res = xcorr2(image, filter,n_res,m_res);
-	//show_arr(image, N, M);
+	//show_arr(res, n_res ,m_res);
 	//cout << "end" << endl;
 
 	//Test Furie
