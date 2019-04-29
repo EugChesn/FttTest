@@ -2,121 +2,16 @@
 #include<ctime>
 #include<complex>
 #include<fftw3.h>
+#include"Fft_Array.h"
 
-#define N 1920
-#define M 1080 //размер картинки
+#define N 3
+#define M 3 //размер картинки
 
-#define N_f 151 //размер фильтра
-#define M_f 151
+#define N_f 3 //размер фильтра
+#define M_f 3
 
 using namespace std;
-template<typename T>
-void fft(T *in, T *out, int H, int W)
-{
-	fftw_plan plan = fftw_plan_dft_2d(H, W, reinterpret_cast<fftw_complex*> (in), reinterpret_cast<fftw_complex*> (in), FFTW_FORWARD, FFTW_ESTIMATE);
-	//fftw_plan plan = fftw_plan_dft_c2r_2d(H, W, reinterpret_cast<double*> (in), reinterpret_cast<fftw_complex*> (out), FFTW_FORWARD, FFTW_ESTIMATE);
-	fftw_execute(plan);
-	fftw_destroy_plan(plan);
-}
-void ifft(complex<double> *out, complex<double> *in, int H, int W)
-{
-	fftw_plan p = fftw_plan_dft_2d(H, W, reinterpret_cast<fftw_complex*> (in), reinterpret_cast<fftw_complex*> (in), FFTW_BACKWARD, FFTW_ESTIMATE);
-	fftw_execute(p);
-	fftw_destroy_plan(p);
-}
-template<typename T>
-void show_arr(T ** arr, int n, int m)
-{
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < m; j++)
-			cout << arr[i][j] << " ";
-
-		cout << endl;
-	}
-}
-complex<double> ** create_array(int n,int m) 
-{
-	complex<double>**arr;
-	arr = new complex<double>*[n];
-	arr[0] = new complex<double>[m * n];
-	for (int i = 1; i < n; i++)
-		arr[i] = arr[0] + i * m;
-
-	return arr;
-}
-void rand_arr(complex<double> ** arr , int H,int W)
-{
-	for (int i = 0; i < H; i++)
-	{
-		for (int j = 0; j < W; j++)
-			arr[i][j] = complex<double>(1 + rand() % 20, 0);
-			//arr[i][j] = complex<double>(1 + rand() % 20, 1 + rand() % 20);
-	}
-}
-void filling_zer(complex<double> ** new_arr, int new_size_n , int new_size_m , complex<double> ** old_arr ,int size_n ,int size_m) // заполнение нулями
-{
-	for (int i = 0; i < new_size_n; i++)
-	{
-		for (int j = 0; j < new_size_m; j++)
-		{
-			if (i < size_n && j < size_m)
-				new_arr[i][j] = old_arr[i][j];
-			else
-				new_arr[i][j] = 0;
-		}
-	}
-}
-/*void normalize(complex<double> **in ,int H,int W)
-{
-	double norm = (H * W);
-	for (int i = 0; i < H; i++)
-	{
-		for (int j = 0; j < W; j++)
-			in[i][j]/=norm;
-	}
-}*/
-void multiply(complex<double> ** arr_ftt1, complex<double> ** arr_ftt2 ,complex<double> ** res , int H,int W) //основная проблема в скорости
-{
-	double normalize = H * W; //сразу нормализуем
-	for (int i = 0; i < H; i++)
-	{
-		for (int j = 0; j < W; j++)
-			res[i][j] = arr_ftt1[i][j] * arr_ftt2[i][j] / normalize;
-	}
-}
-void rot180(complex<double> **arr, int n, int m) //for filter
-{
-	int center = n / 2; 
-	int center_j = m / 2;
-
-	///////////////////////////////// Reverse rows
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < center_j; j++) 
-		{
-			complex<double> b = arr[i][j];
-			arr[i][j] = arr[i][m - j - 1]; //n - i - 1
-			arr[i][m - j - 1] = b; //n - i - 1
-		}
-	}
-	/////////////////////////////// Rotate 180
-	for (int i = 0; i < center; i++)
-	{
-		for (int j = 0; j < m; j++)
-		{
-			complex<double> b = conj(arr[i][j]);
-			arr[i][j] = conj(arr[n - i - 1][j]);
-			arr[n - i - 1][j] = b; 
-		}
-	}
-}
-void delete_array(complex<double>** arr)
-{
-	delete[] arr[0];
-	delete arr;
-}
-complex<double> ** xcorr2(complex<double> ** image, complex<double> ** filter ,int &n,int &m)
+/*complex<double> ** xcorr2(complex<double> ** image, complex<double> ** filter ,int &n,int &m)
 {
 	int res_size_n = N + N_f - 1; n = res_size_n;
 	int res_size_m = M + M_f - 1; m = res_size_m;
@@ -138,39 +33,58 @@ complex<double> ** xcorr2(complex<double> ** image, complex<double> ** filter ,i
 
 	ifft(&mult[0][0], &mult[0][0], res_size_n, res_size_m);//out = in //Обратное преобразование Фурье
 	return mult;
-}
+}*/
+template<typename T>
+Fft_Array<T> * xcorr2(Fft_Array<T> & image, Fft_Array<T> & filter)
+{
+	filter.rot180();
+	int res_size_n = image.n + filter.n - 1; 
+	int res_size_m = image.m + filter.n - 1; 
 
+	Fft_Array<T> image_temp(image, res_size_n, res_size_m);
+	Fft_Array<T> filter_temp(filter, res_size_n, res_size_m);
+
+	fft(&image_temp.array[0][0], &image_temp.array[0][0], res_size_n, res_size_m); //out = in //Фурье прямое преобразование
+	fft(&filter_temp.array[0][0], &filter_temp.array[0][0], res_size_n, res_size_m); //out = in
+
+	Fft_Array<T> * mult = new Fft_Array<T>(image_temp, filter_temp);
+	ifft(&mult->array[0][0], &mult->array[0][0], res_size_n, res_size_m);//out = in //Обратное преобразование Фурье
+
+	return mult;
+}
 int main()
 {
 	srand(time(0));
-	complex<double> **image = nullptr;
-	complex<double> **filter = nullptr;
-	image = create_array(N,M);
-	filter = create_array(N_f,M_f);
-	rand_arr(image,N,M);
-	rand_arr(filter, N_f, M_f);
 
-	
-	//cout << "image" << endl;
-	//show_arr(image,N,M);
-	//cout << "filter" << endl;
-	//show_arr(filter, N_f, M_f);
+	//Xcorr2 for complex to complex 
+	Fft_Array<complex<double>> image(N_f, M_f);
+	Fft_Array<complex<double>> filter(N, M);
+	image.rand_arr();
+	filter.rand_arr();
+	Fft_Array<complex<double>> *result = xcorr2(image, filter);
 
-	int n_res = 0;
-	int m_res = 0;
-	complex<double>** res = xcorr2(image, filter,n_res,m_res);
-	//show_arr(res, n_res ,m_res);
-	//cout << "end" << endl;
 
-	//Test Furie
-	/*fft(&image[0][0], &image[0][0], N, M);
-	ifft(&image[0][0], &image[0][0], N, M);
-	normalize(image, N, M);*/
+	/*Fft_Array<double> image(N, M);
+	Fft_Array<double> filter(N_f, M_f);
+	image.rand_arr();
+	filter.rand_arr();
+	image.rand_arr();
+	filter.rand_arr();
+	image.show();
+	filter.show();
+	int size_complex = floor(M / 2) + 1;
+	Fft_Array<complex<double>> tmp(N, size_complex);
+	//fftw_plan plan = fftw_plan_dft_r2c_2d(N ,M, &image.array[0][0], reinterpret_cast<fftw_complex*>(&tmp.array[0][0]), FFTW_ESTIMATE);
+	Fft_Array<double> out(N, M);
+	Fft_Array<complex<double>> in(N, M);
+	in.rand_arr();
+	in.show();
+	fftw_plan p = fftw_plan_dft_c2r_2d(N, M, reinterpret_cast<fftw_complex*> (&in.array[0][0]), (&out.array[0][0]), FFTW_ESTIMATE);
+	fftw_execute(p);
+	out.show();*/
 
-	delete_array(res);
 
-	delete_array(image);
-	delete_array(filter);
+	cout << "runtime = " << clock() / 1000.0 << endl; // время работы программы 
 	system("pause");
 	return 0;
 }
